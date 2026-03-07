@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>motion-avatar</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="bg-slate-900 text-white min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="px-6 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+      <h1 class="text-xl font-bold tracking-wide text-indigo-400">motion-avatar</h1>
+      <div class="flex gap-3 items-center">
+        <label
+          id="vrm-label"
+          class="cursor-pointer px-4 py-2 text-sm font-medium bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+        >
+          VRM を読み込む
+          <input id="vrm-input" type="file" accept=".vrm" class="hidden" />
+        </label>
+        <button
+          id="camera-start"
+          class="px-4 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors"
+        >
+          カメラ開始
+        </button>
+        <button
+          id="camera-stop"
+          class="hidden px-4 py-2 text-sm font-medium bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors"
+        >
+          カメラ停止
+        </button>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <main class="flex flex-1 overflow-hidden min-h-0">
+      <!-- 3D canvas -->
+      <div id="scene-container" class="flex-1 relative min-w-0">
+        <canvas id="three-canvas" class="block w-full h-full"></canvas>
+        <div
+          id="loading-overlay"
+          class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 gap-3"
+        >
+          <svg class="animate-spin w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 11-8 8z"></path>
+          </svg>
+          <p class="text-slate-300 text-sm" id="loading-text">初期化中…</p>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <aside class="w-72 bg-slate-800 border-l border-slate-700 flex flex-col gap-5 p-4 shrink-0 overflow-y-auto">
+        <!-- Camera preview -->
+        <div>
+          <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">カメラ映像</p>
+          <video
+            id="preview-video"
+            autoplay
+            muted
+            playsinline
+            class="w-full rounded-lg bg-slate-900 aspect-video object-cover"
+          ></video>
+          <!-- MediaPipe 入力用（非表示） -->
+          <video id="input-video" autoplay muted playsinline class="hidden"></video>
+        </div>
+
+        <!-- Realtime stats -->
+        <div>
+          <p class="text-xs text-slate-400 mb-3 font-medium uppercase tracking-wider">リアルタイム値</p>
+          <div class="space-y-3 text-sm">
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-slate-300">👁 左目</span>
+                <span id="val-blink-left" class="text-slate-400 tabular-nums">0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div id="bar-blink-left" class="h-2 bg-indigo-400 rounded-full transition-all duration-75" style="width:0%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-slate-300">👁 右目</span>
+                <span id="val-blink-right" class="text-slate-400 tabular-nums">0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div id="bar-blink-right" class="h-2 bg-indigo-400 rounded-full transition-all duration-75" style="width:0%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-slate-300">👄 口</span>
+                <span id="val-mouth" class="text-slate-400 tabular-nums">0%</span>
+              </div>
+              <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div id="bar-mouth" class="h-2 bg-pink-400 rounded-full transition-all duration-75" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="mt-auto pt-4 border-t border-slate-700">
+          <p class="text-xs text-slate-400 mb-1 uppercase tracking-wider">ステータス</p>
+          <p id="status-text" class="text-sm text-slate-300">初期化中…</p>
+        </div>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
