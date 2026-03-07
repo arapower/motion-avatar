@@ -33,4 +33,25 @@ test.describe('motion-avatar 基本 UI', () => {
     await expect(page.locator('#bar-blink-right')).toBeAttached()
     await expect(page.locator('#bar-mouth')).toBeAttached()
   })
+
+  test('キャプチャー範囲ボタンが 3 つ存在する', async ({ page }) => {
+    const btns = page.locator('.range-btn')
+    await expect(btns).toHaveCount(3)
+  })
+
+  test('初期状態では「顔のみ」ボタンがアクティブ', async ({ page }) => {
+    const faceBtn = page.locator('#range-face')
+    await expect(faceBtn).toHaveClass(/active-range/)
+  })
+
+  test('「上半身」ボタンをクリックするとアクティブになる', async ({ page }) => {
+    await page.locator('#range-upper-body').click()
+    await expect(page.locator('#range-upper-body')).toHaveClass(/active-range/)
+    await expect(page.locator('#range-face')).not.toHaveClass(/active-range/)
+  })
+
+  test('「全身」ボタンをクリックするとアクティブになる', async ({ page }) => {
+    await page.locator('#range-full-body').click()
+    await expect(page.locator('#range-full-body')).toHaveClass(/active-range/)
+  })
 })

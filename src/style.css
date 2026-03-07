@@ -9,3 +9,16 @@
 body {
   height: 100dvh;
 }
+
+/* キャプチャー範囲ボタン */
+.range-btn {
+  color: rgb(148 163 184); /* slate-400 */
+}
+.range-btn:hover {
+  background-color: rgb(51 65 85); /* slate-700 */
+  color: rgb(226 232 240); /* slate-200 */
+}
+.range-btn.active-range {
+  background-color: rgb(79 70 229); /* indigo-600 */
+  color: white;
+}

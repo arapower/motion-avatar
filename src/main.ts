@@ -1,24 +1,29 @@
-import { initScene, loadVRM } from './scene'
+import { initScene, loadVRM, type CaptureRange } from './scene'
 import { setupCamera, stopCamera } from './camera'
 import { initFaceTracker, detectFace } from './face-tracker'
+import { initPoseTracker, detectPose } from './pose-tracker'
 import { applyFaceToVRM } from './landmark-mapper'
+import { applyUpperBodyToVRM, applyLowerBodyToVRM } from './pose-mapper'
 
-const inputVideo    = document.getElementById('input-video')    as HTMLVideoElement
-const previewVideo  = document.getElementById('preview-video')  as HTMLVideoElement
-const canvas        = document.getElementById('three-canvas')   as HTMLCanvasElement
-const cameraStartBtn = document.getElementById('camera-start')  as HTMLButtonElement
-const cameraStopBtn  = document.getElementById('camera-stop')   as HTMLButtonElement
-const vrmInput      = document.getElementById('vrm-input')      as HTMLInputElement
-const loadingOverlay = document.getElementById('loading-overlay') as HTMLDivElement
-const loadingText   = document.getElementById('loading-text')   as HTMLParagraphElement
-const statusText    = document.getElementById('status-text')    as HTMLParagraphElement
+// DOM refs
+const inputVideo      = document.getElementById('input-video')      as HTMLVideoElement
+const previewVideo    = document.getElementById('preview-video')    as HTMLVideoElement
+const canvas          = document.getElementById('three-canvas')     as HTMLCanvasElement
+const cameraStartBtn  = document.getElementById('camera-start')     as HTMLButtonElement
+const cameraStopBtn   = document.getElementById('camera-stop')      as HTMLButtonElement
+const vrmInput        = document.getElementById('vrm-input')        as HTMLInputElement
+const loadingOverlay  = document.getElementById('loading-overlay')  as HTMLDivElement
+const loadingText     = document.getElementById('loading-text')     as HTMLParagraphElement
+const statusText      = document.getElementById('status-text')      as HTMLParagraphElement
 
-const barBlinkLeft  = document.getElementById('bar-blink-left')  as HTMLDivElement
-const barBlinkRight = document.getElementById('bar-blink-right') as HTMLDivElement
-const barMouth      = document.getElementById('bar-mouth')       as HTMLDivElement
-const valBlinkLeft  = document.getElementById('val-blink-left')  as HTMLSpanElement
-const valBlinkRight = document.getElementById('val-blink-right') as HTMLSpanElement
-const valMouth      = document.getElementById('val-mouth')       as HTMLSpanElement
+const barBlinkLeft    = document.getElementById('bar-blink-left')   as HTMLDivElement
+const barBlinkRight   = document.getElementById('bar-blink-right')  as HTMLDivElement
+const barMouth        = document.getElementById('bar-mouth')        as HTMLDivElement
+const valBlinkLeft    = document.getElementById('val-blink-left')   as HTMLSpanElement
+const valBlinkRight   = document.getElementById('val-blink-right')  as HTMLSpanElement
+const valMouth        = document.getElementById('val-mouth')        as HTMLSpanElement
+
+const rangeBtns = document.querySelectorAll<HTMLButtonElement>('.range-btn')
 
 interface Globals {
   _ma_blinkL?: number
@@ -26,7 +31,9 @@ interface Globals {
   _ma_mouth?:  number
 }
 
-let cameraRunning = false
+let cameraRunning    = false
+let captureRange: CaptureRange = 'face'
+let poseTrackerReady = false
 
 function setStatus(msg: string): void {
   statusText.textContent = msg
@@ -55,14 +62,31 @@ function updateStatsUI(): void {
   valMouth.textContent      = `${mouth}%`
 }
 
+function updateRangeBtns(range: CaptureRange): void {
+  rangeBtns.forEach(btn => {
+    if (btn.dataset['range'] === range) {
+      btn.classList.add('active-range')
+    } else {
+      btn.classList.remove('active-range')
+    }
+  })
+}
+
 async function main(): Promise<void> {
-  // 3D シーン初期化
   const sceneCtx = initScene(canvas)
 
-  // MediaPipe 初期化
-  setLoading('MediaPipe 初期化中…')
-  setStatus('MediaPipe 初期化中…')
+  // Face tracker 初期化
+  setLoading('MediaPipe FaceLandmarker 初期化中…')
+  setStatus('FaceLandmarker 初期化中…')
   await initFaceTracker()
+
+  // Pose tracker は遅延初期化（上半身/全身が選択されたときに実行）
+  async function ensurePoseTracker(): Promise<void> {
+    if (poseTrackerReady) return
+    setStatus('PoseLandmarker 初期化中…')
+    await initPoseTracker()
+    poseTrackerReady = true
+  }
 
   // デフォルト VRM 読み込み
   setLoading('VRM 読み込み中…')
@@ -78,23 +102,51 @@ async function main(): Promise<void> {
     console.error(e)
   }
 
-  // 顔検出ループ（毎フレーム）
+  // --- キャプチャー範囲ボタン ---
+  rangeBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const range = btn.dataset['range'] as CaptureRange
+      captureRange = range
+      updateRangeBtns(range)
+      sceneCtx.setCaptureRange(range)
+      if (range !== 'face') {
+        await ensurePoseTracker()
+        if (cameraRunning) setStatus('トラッキング中')
+      }
+    })
+  })
+
+  // --- 顔・体 検出ループ ---
   function detectLoop(): void {
     if (cameraRunning && sceneCtx.vrm && inputVideo.readyState >= 2) {
-      const result = detectFace(inputVideo, performance.now())
-      if (result) {
-        applyFaceToVRM(result, sceneCtx.vrm)
+      const ts = performance.now()
+
+      const faceResult = detectFace(inputVideo, ts)
+      if (faceResult) {
+        applyFaceToVRM(faceResult, sceneCtx.vrm)
         updateStatsUI()
+      }
+
+      if (captureRange !== 'face' && poseTrackerReady) {
+        const poseResult = detectPose(inputVideo, ts)
+        const lms = poseResult?.worldLandmarks?.[0]
+        if (lms) {
+          applyUpperBodyToVRM(lms, sceneCtx.vrm)
+          if (captureRange === 'full-body') {
+            applyLowerBodyToVRM(lms, sceneCtx.vrm)
+          }
+        }
       }
     }
     requestAnimationFrame(detectLoop)
   }
   detectLoop()
 
-  // カメラ開始
+  // --- カメラ開始 ---
   cameraStartBtn.addEventListener('click', async () => {
     try {
       setStatus('カメラ接続中…')
+      if (captureRange !== 'face') await ensurePoseTracker()
       await setupCamera(inputVideo, previewVideo)
       cameraRunning = true
       cameraStartBtn.classList.add('hidden')
@@ -106,7 +158,7 @@ async function main(): Promise<void> {
     }
   })
 
-  // カメラ停止
+  // --- カメラ停止 ---
   cameraStopBtn.addEventListener('click', () => {
     stopCamera(inputVideo, previewVideo)
     cameraRunning = false
@@ -115,7 +167,7 @@ async function main(): Promise<void> {
     setStatus('カメラ停止中')
   })
 
-  // VRM ファイル読み込み
+  // --- VRM ファイル読み込み ---
   vrmInput.addEventListener('change', async () => {
     const file = vrmInput.files?.[0]
     if (!file) return
