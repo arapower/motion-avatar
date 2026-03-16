@@ -33,12 +33,13 @@ export interface Lm3D {
 /**
  * MediaPipe world 座標 → VRM モデル座標に変換する。
  *
- * MediaPipe: X 右（カメラ視点）/ Y 上 / Z 手前
+ * MediaPipe: X 右（カメラ視点）/ Y 上 / Z 手前（カメラ方向）
  * VRM:       X 右（モデル視点）/ Y 上 / Z 手前
  * カメラを向いている被写体の X はカメラ基準と反転している。
+ * Z 軸は両者ともカメラ向きなので反転不要。
  */
 export function mediapipeToVrm(lm: Lm3D): THREE.Vector3 {
-  return new THREE.Vector3(-lm.x, lm.y, -lm.z)
+  return new THREE.Vector3(-lm.x, lm.y, lm.z)
 }
 
 /**

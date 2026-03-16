@@ -105,8 +105,9 @@ export function applyFaceToVRM(result: FaceLandmarkerResult, vrm: VRM): void {
     // MediaPipe は列優先 (column-major)
     _mat4.fromArray(m)
     _quat.setFromRotationMatrix(_mat4)
-    // VRM (+Y up, -Z front) へ変換
-    _quat.x *= -1
+    // MediaPipe → VRM 座標変換 (X 軸ミラー: diag(-1,1,1) 適用)
+    // pitch (X) は不変、yaw (Y) と roll (Z) を反転
+    _quat.y *= -1
     _quat.z *= -1
     const head = vrm.humanoid.getNormalizedBoneNode('head')
     if (head) head.quaternion.slerp(_quat, 0.35)

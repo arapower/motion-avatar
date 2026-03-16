@@ -2,8 +2,10 @@ import { initScene, loadVRM, type CaptureRange } from './scene'
 import { setupCamera, stopCamera } from './camera'
 import { initFaceTracker, detectFace } from './face-tracker'
 import { initPoseTracker, detectPose } from './pose-tracker'
+import { initHandTracker, detectHands } from './hand-tracker'
 import { applyFaceToVRM } from './landmark-mapper'
 import { applyUpperBodyToVRM, applyLowerBodyToVRM } from './pose-mapper'
+import { applyHandToVRM } from './hand-mapper'
 
 // DOM refs
 const inputVideo      = document.getElementById('input-video')      as HTMLVideoElement
@@ -34,6 +36,7 @@ interface Globals {
 let cameraRunning    = false
 let captureRange: CaptureRange = 'face'
 let poseTrackerReady = false
+let handTrackerReady = false
 
 function setStatus(msg: string): void {
   statusText.textContent = msg
@@ -88,6 +91,14 @@ async function main(): Promise<void> {
     poseTrackerReady = true
   }
 
+  // Hand tracker は遅延初期化（上半身/全身で自動起動）
+  async function ensureHandTracker(): Promise<void> {
+    if (handTrackerReady) return
+    setStatus('HandLandmarker 初期化中…')
+    await initHandTracker()
+    handTrackerReady = true
+  }
+
   // デフォルト VRM 読み込み
   setLoading('VRM 読み込み中…')
   setStatus('VRM 読み込み中…')
@@ -111,6 +122,7 @@ async function main(): Promise<void> {
       sceneCtx.setCaptureRange(range)
       if (range !== 'face') {
         await ensurePoseTracker()
+        await ensureHandTracker()
         if (cameraRunning) setStatus('トラッキング中')
       }
     })
@@ -137,6 +149,11 @@ async function main(): Promise<void> {
           }
         }
       }
+
+      if (captureRange !== 'face' && handTrackerReady) {
+        const handResult = detectHands(inputVideo, ts)
+        if (handResult) applyHandToVRM(handResult, sceneCtx.vrm)
+      }
     }
     requestAnimationFrame(detectLoop)
   }
@@ -146,7 +163,10 @@ async function main(): Promise<void> {
   cameraStartBtn.addEventListener('click', async () => {
     try {
       setStatus('カメラ接続中…')
-      if (captureRange !== 'face') await ensurePoseTracker()
+      if (captureRange !== 'face') {
+        await ensurePoseTracker()
+        await ensureHandTracker()
+      }
       await setupCamera(inputVideo, previewVideo)
       cameraRunning = true
       cameraStartBtn.classList.add('hidden')

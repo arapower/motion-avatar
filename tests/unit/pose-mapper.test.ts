@@ -11,11 +11,11 @@ import {
 // mediapipeToVrm
 // ----------------------------------------------------------------
 describe('mediapipeToVrm', () => {
-  it('X を反転し Y/Z を保持する', () => {
+  it('X を反転し Y・Z を保持する', () => {
     const result = mediapipeToVrm({ x: 1, y: 2, z: 3 })
     expect(result.x).toBeCloseTo(-1)
     expect(result.y).toBeCloseTo(2)
-    expect(result.z).toBeCloseTo(-3)
+    expect(result.z).toBeCloseTo(3)
   })
 
   it('原点は原点のまま', () => {
