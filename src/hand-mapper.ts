@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { VRM, VRMHumanBoneName } from '@pixiv/three-vrm'
 import type { HandLandmarkerResult } from './hand-tracker'
-import { jointAngle, type Lm3D } from './pose-mapper'
+import { directionBetween, jointAngle, type Lm3D } from './pose-mapper'
 
 // ----------------------------------------------------------------
 // MediaPipe HandLandmarker 21 点インデックス
@@ -71,12 +71,18 @@ export function fingerCurlAngle(base: Lm3D, joint: Lm3D, tip: Lm3D): number {
   return Math.PI - jointAngle(base, joint, tip)
 }
 
+export function handForwardDirection(lms: Lm3D[]): THREE.Vector3 {
+  return directionBetween(lms[HAND_LM.WRIST], lms[HAND_LM.MIDDLE_MCP])
+}
+
 // ----------------------------------------------------------------
 // VRM への適用
 // ----------------------------------------------------------------
 const SLERP = 0.25
 const _q  = new THREE.Quaternion()
 const _ax = new THREE.Vector3(0, 0, 1)
+const REST_R_HAND = new THREE.Vector3(1, 0, 0)
+const REST_L_HAND = new THREE.Vector3(-1, 0, 0)
 
 /**
  * 1 本の指のカール回転を VRM ボーンに適用する。
@@ -129,6 +135,13 @@ export function applyHandToVRM(result: HandLandmarkerResult, vrm: VRM): void {
     const isRight = cat === 'Left'
     const side  = isRight ? 'right' : 'left'
     const sign  = isRight ? -1 : 1
+
+    // 手首〜掌全体の向きを反映して、指トラッキングの見え方を強める。
+    const wristDir = handForwardDirection(lms)
+    if (wristDir.length() > 0.01) {
+      _q.setFromUnitVectors(isRight ? REST_R_HAND : REST_L_HAND, wristDir)
+      vrm.humanoid.getNormalizedBoneNode(isRight ? 'rightHand' : 'leftHand')?.quaternion.slerp(_q, SLERP)
+    }
 
     // 4 本指（人差し指〜小指）
     for (const f of buildFingerDefs(side)) {

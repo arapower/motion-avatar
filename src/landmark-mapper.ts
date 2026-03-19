@@ -94,6 +94,10 @@ interface MotionAvatarGlobals {
 const _mat4 = new THREE.Matrix4()
 const _quat = new THREE.Quaternion()
 
+export function extractPreviewAlignedHeadQuaternion(matrix: THREE.Matrix4): THREE.Quaternion {
+  return new THREE.Quaternion().setFromRotationMatrix(matrix)
+}
+
 export function applyFaceToVRM(result: FaceLandmarkerResult, vrm: VRM): void {
   const landmarks = result.faceLandmarks?.[0]
   if (!landmarks) return
@@ -104,11 +108,9 @@ export function applyFaceToVRM(result: FaceLandmarkerResult, vrm: VRM): void {
     const m = matrices[0].data
     // MediaPipe は列優先 (column-major)
     _mat4.fromArray(m)
-    _quat.setFromRotationMatrix(_mat4)
-    // MediaPipe → VRM 座標変換 (X 軸ミラー: diag(-1,1,1) 適用)
-    // pitch (X) は不変、yaw (Y) と roll (Z) を反転
-    _quat.y *= -1
-    _quat.z *= -1
+    _quat.copy(extractPreviewAlignedHeadQuaternion(_mat4))
+    // 頭部はプレビュー映像上の向きをそのまま基準にする。
+    // ここで追加の軸反転を入れると、首の上下左右が逆転しやすい。
     const head = vrm.humanoid.getNormalizedBoneNode('head')
     if (head) head.quaternion.slerp(_quat, 0.35)
   }

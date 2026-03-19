@@ -44,6 +44,15 @@ describe('directionBetween', () => {
     expect(dir.length()).toBeCloseTo(1, 5)
   })
 
+  it('Z 正方向は VRM 側でも正方向を維持する', () => {
+    const from: Lm3D = { x: 0, y: 0, z: 0 }
+    const to: Lm3D = { x: 0, y: 0, z: 2 }
+    const dir = directionBetween(from, to)
+    expect(dir.x).toBeCloseTo(0, 5)
+    expect(dir.y).toBeCloseTo(0, 5)
+    expect(dir.z).toBeCloseTo(1, 5)
+  })
+
   it('同一点の場合はゼロベクトルを返す（ゼロ除算防止）', () => {
     const p: Lm3D = { x: 1, y: 2, z: 3 }
     const dir = directionBetween(p, p)
@@ -108,5 +117,16 @@ describe('Quaternion.setFromUnitVectors sanity', () => {
     expect(result.x).toBeCloseTo(0, 5)
     expect(result.y).toBeCloseTo(-1, 5)
     expect(result.z).toBeCloseTo(0, 5)
+  })
+
+  it('+X → +Z の回転クォータニオンを適用すると +Z に向く', () => {
+    const q = new THREE.Quaternion()
+    const from = new THREE.Vector3(1, 0, 0)
+    const to = new THREE.Vector3(0, 0, 1)
+    q.setFromUnitVectors(from, to)
+    const result = from.clone().applyQuaternion(q)
+    expect(result.x).toBeCloseTo(0, 5)
+    expect(result.y).toBeCloseTo(0, 5)
+    expect(result.z).toBeCloseTo(1, 5)
   })
 })

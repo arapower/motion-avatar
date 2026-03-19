@@ -72,11 +72,9 @@ export function jointAngle(a: Lm3D, b: Lm3D, c: Lm3D): number {
 const REST_R_ARM  = new THREE.Vector3(1,  0, 0)
 const REST_L_ARM  = new THREE.Vector3(-1, 0, 0)
 const REST_LEG    = new THREE.Vector3(0, -1, 0)
-const ELBOW_AXIS  = new THREE.Vector3(0,  0, 1)
 const KNEE_AXIS   = new THREE.Vector3(1,  0, 0)
 
 const _q  = new THREE.Quaternion()
-const _ax = new THREE.Vector3()
 
 const SLERP = 0.3
 
@@ -101,22 +99,19 @@ export function applyUpperBodyToVRM(lms: Lm3D[], vrm: VRM): void {
     hum.getNormalizedBoneNode('leftUpperArm')?.quaternion.slerp(_q, SLERP)
   }
 
-  // --- 右下腕: 肘の曲がり角度 ---
-  const rElbow = jointAngle(
-    lms[POSE_LM.RIGHT_SHOULDER], lms[POSE_LM.RIGHT_ELBOW], lms[POSE_LM.RIGHT_WRIST]
-  )
-  // π=伸ばした（回転0）→ 0=折った（最大曲げ）
-  _ax.set(0, 0, 1)
-  _q.setFromAxisAngle(_ax, -(Math.PI - rElbow))
-  hum.getNormalizedBoneNode('rightLowerArm')?.quaternion.slerp(_q, SLERP)
+  // --- 右下腕: 肘 → 手首 の方向 ---
+  const rForearmDir = directionBetween(lms[POSE_LM.RIGHT_ELBOW], lms[POSE_LM.RIGHT_WRIST])
+  if (rForearmDir.length() > 0.01) {
+    _q.setFromUnitVectors(REST_R_ARM, rForearmDir)
+    hum.getNormalizedBoneNode('rightLowerArm')?.quaternion.slerp(_q, SLERP)
+  }
 
-  // --- 左下腕: 肘の曲がり角度 ---
-  const lElbow = jointAngle(
-    lms[POSE_LM.LEFT_SHOULDER], lms[POSE_LM.LEFT_ELBOW], lms[POSE_LM.LEFT_WRIST]
-  )
-  _ax.set(0, 0, 1)
-  _q.setFromAxisAngle(ELBOW_AXIS, (Math.PI - lElbow))
-  hum.getNormalizedBoneNode('leftLowerArm')?.quaternion.slerp(_q, SLERP)
+  // --- 左下腕: 肘 → 手首 の方向 ---
+  const lForearmDir = directionBetween(lms[POSE_LM.LEFT_ELBOW], lms[POSE_LM.LEFT_WRIST])
+  if (lForearmDir.length() > 0.01) {
+    _q.setFromUnitVectors(REST_L_ARM, lForearmDir)
+    hum.getNormalizedBoneNode('leftLowerArm')?.quaternion.slerp(_q, SLERP)
+  }
 }
 
 /**

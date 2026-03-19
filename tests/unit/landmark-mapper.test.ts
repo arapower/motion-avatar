@@ -3,8 +3,10 @@ import {
   calculateEAR,
   calculateMouthRatio,
   earToBlinkWeight,
+  extractPreviewAlignedHeadQuaternion,
   type Point2D,
 } from '../../src/landmark-mapper'
+import * as THREE from 'three'
 
 // ----------------------------------------------------------------
 // calculateEAR
@@ -96,5 +98,23 @@ describe('earToBlinkWeight', () => {
       expect(w).toBeGreaterThanOrEqual(0)
       expect(w).toBeLessThanOrEqual(1)
     }
+  })
+})
+
+// ----------------------------------------------------------------
+// extractPreviewAlignedHeadQuaternion
+// ----------------------------------------------------------------
+describe('extractPreviewAlignedHeadQuaternion', () => {
+  it('回転行列からクォータニオンをそのまま取り出す', () => {
+    const source = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(0.2, -0.3, 0.1, 'XYZ')
+    )
+    const matrix = new THREE.Matrix4().makeRotationFromQuaternion(source)
+    const extracted = extractPreviewAlignedHeadQuaternion(matrix)
+
+    expect(extracted.x).toBeCloseTo(source.x, 5)
+    expect(extracted.y).toBeCloseTo(source.y, 5)
+    expect(extracted.z).toBeCloseTo(source.z, 5)
+    expect(extracted.w).toBeCloseTo(source.w, 5)
   })
 })
