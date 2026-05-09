@@ -2,6 +2,10 @@
 
 カメラ映像から顔ランドマークをリアルタイムで取得し、VRM 3D アバターの頭部回転・目瞬き・口開閉に反映するサーバレス Web アプリ。
 
+## Progress Notes
+
+- [WORK_IN_PROGRESS.md](WORK_IN_PROGRESS.md)
+
 ## 技術スタック
 
 | レイヤー | 技術 |
